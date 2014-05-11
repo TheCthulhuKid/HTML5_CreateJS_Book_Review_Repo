@@ -217,11 +217,11 @@ function newLevel(){
             xPos = WALL_THICKNESS;
             yPos += brick.height;
         }
+    }
 
-        level++;
-        if(level == levels.length){
-            level--;
-        }
+    level++;
+    if(level == levels.length){
+        level--;
     }
 }
 
