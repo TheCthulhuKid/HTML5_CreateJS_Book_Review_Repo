@@ -89,7 +89,7 @@ function buildDiceTray(){
     rollMsg.x = trayBG.getBounds().width;
     rollMsg.y = rollBtnOffset;
     rollMsg.name = 'rollMsg';
-    rollMsg.visible = false;
+    rollMsg.alpha = 0;
     diceTray.addChild(rollMsg);
 
     //  Dice
@@ -201,12 +201,12 @@ function buildScoreCard(){
     scoreCard.addChild(scoreMsg);
 
     //  Score
-    scoreTxt = new createjs.Text('0', '50px Calbri', '#FFF');
+    scoreTxt = new createjs.Text('0', '50px Calibri', '#FFF');
     scoreTxt.name = 'scoreTxt';
     scoreTxt.textAlign = 'center';
     scoreTxt.x = scoreCard.getBounds().width / 2;
     scoreTxt.y = scoreMsg.y + 30;
-    scoreTxt.a;pha = 0;
+    scoreTxt.alpha = 0;
     scoreCard.addChild(scoreTxt);
 
     stage.addChild(scoreCard);
@@ -272,16 +272,25 @@ function revealTitle(){
 }
 
 function revealDiceTray(){
-    var die, delay, btn, rollMessage;
+    var die, delay, btn;
     createjs.Tween.get(diceTray).to({alpha:1}, 500);
-    for(var i = 0; i < NUM_DICE; i++){
+    for (i = 0; i < NUM_DICE; i++) {
         die = diceTray.getChildByName('die' + i);
         die.scaleX = die.scaleY = 0;
+        die.visible = true;
         delay = (i * 150) + 500;
         createjs.Tween.get(die).wait(delay).to({scaleX:1, scaleY:1}, 1000, createjs.Ease.elasticOut);
-        rollMsg = diceTray.getChildByName('rollMsg');
-        createjs.Tween.gwt(rollMsg).wait(delay).to({alpha:1}, 1000);
     }
+
+    btn = diceTray.getChildByName('rollBtn');
+    btn.scaleX = btn.scaleY = 0;
+    btn.visible = true;
+    delay += 150;
+
+    createjs.Tween.get(btn).wait(delay)
+        .to({scaleX:1, scaleY:1, rotation:0}, 1000, createjs.Ease.elasticOut);
+    rollMsg = diceTray.getChildByName('rollMsg');
+    createjs.Tween.get(rollMsg).wait(delay).to({alpha:1}, 1000);
 }
 
 function revealScoreCard(){
@@ -372,4 +381,112 @@ function holdDie(e){
         die.hold = false;
         die.alpha = 1;
     }
+}
+
+function onScoreCardBtnClick(e){
+    var btn = e.target;
+    btn.mouseEnabled = false;
+    scoreCard.mouseEnabled = false;
+    var score = Scoring.getScore(btn.name, diceValues, btn.key);
+
+    if(scoredFakezee){
+        bonusScore += Scoring.getScore('bonus', diceValues, null);
+    }
+    if(btn.name == 'fakezee' && score == 50){
+        scoredFakezee = true;
+    }
+
+    btn.gotoAndStop(btn.name + '_score');
+    updateScore(btn, score);
+    updateScoreboard();
+    evalGame();
+}
+
+function updateScore(btn, score){
+    var label = new createjs.Text(score, '27px Calibri', '#FFF');
+    var labelXoffset;
+    var labelYoffset;
+    switch (btn.section){
+        case 1:
+            section1Score += score;
+            labelXoffset = 70;
+            labelYoffset = 11;
+            break;
+        case 2:
+            section2Score += score;
+            if(btn.name == 'fakezee'){
+                labelXoffset = 0;
+                labelYoffset = -15;
+            }else{
+                labelXoffset = 35;
+                labelYoffset = 10;
+            }
+            break;
+    }
+
+    label.name = 'label';
+    label.textAlign = 'center';
+    label.x = btn.x + labelXoffset;
+    label.y = btn.y + labelYoffset;
+
+    scoreCard.addChild(label);
+}
+
+function updateScoreboard(){
+    var section1Txt = scoreboard.getChildByName('section1Txt');
+    var section2Txt = scoreboard.getChildByName('section2Txt');
+    bonusTxt = scoreboard.getChildByName('bonusTxt');
+    var totalScoreTxt = scoreCard.getChildByName('scoreTxt');
+
+    section1Txt.text = section1Score;
+    section2Txt.text = section2Score;
+    bonusTxt.text = bonusScore;
+    totalScoreTxt.text = totalScore = (section1Score + section2Score + bonusScore);
+}
+
+function evalGame(){
+    numScored++;
+    if(numScored == NUM_SCORES){
+        setTimeout(gameOver, 1500);
+    }else{
+        resetDiceTray();
+    }
+}
+
+function resetDiceTray(){
+    var die;
+    var rollBtn = diceTray.getChildByName('rollBtn');
+    rollsTxt = rollBtn.getChildByName('rollsTxt');
+
+    for(var i = 0; i < NUM_DICE; i++){
+        die = diceTray.getChildByName('die' + i);
+        die.alpha = 1;
+        die.mouseEnabled = false;
+        die.hold = false;
+    }
+
+    rollBtn.alpha = 1;
+    rollBtn.mouseEnabled = true;
+    rollsLeft = rollsTxt.text = NUM_ROLLS;
+}
+
+function gameOver(){
+    var playAgainBtn = new createjs.Sprite(spritesheet, 'playAgain');
+    var fakezeeBtn = scoreCard.getChildByName( 'fakezee');
+    playAgainBtn.regX = fakezeeBtn.regX;
+    playAgainBtn.regY = fakezeeBtn.regY;
+    playAgainBtn.x = fakezeeBtn.x;
+    playAgainBtn.y = fakezeeBtn.y;
+    playAgainBtn.on('click', replayGame);
+
+    scoreCard.addChild(playAgainBtn);
+    scoreCard.removeChild(fakezeeBtn);
+    scoreCard.mouseEnabled = true;
+}
+
+function replayGame(){
+    section1Score = section2Score = bonusScore = numScored = 0;
+    rollsLeft = NUM_ROLLS;
+    stage.removeAllChildren();
+    initGame();
 }
